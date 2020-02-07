@@ -54,11 +54,13 @@ public class Client {
 				socket=new Socket(this.ip,this.serverPort);
 				//向服务端发送数据
 				PrintStream out=new PrintStream(socket.getOutputStream());
+				System.out.println("请输入想要成交的股名：");
+				String stockName=scanner.next();
 				System.out.println("请输入想要成交的股价：");
 				int price=scanner.nextInt();
 				System.out.println("请输入命令[eg:Buy/Sell]:");
 				String data=scanner.next();
-				data+=":"+price;
+				data+=":"+stockName+":"+price;
 				//要发送的数据
 				System.out.println("客户端发送的数据是："+data);
 				out.println(data);

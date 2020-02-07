@@ -6,6 +6,9 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
+
 
 /**
  * 股票服务端
@@ -55,10 +58,10 @@ public class SocketServer {
 	 * @version 
 	 * @description
 	 */
-	//卖家出价
-	private Integer sellPrice=null;
-	//买家出价
-	private Integer buyPrice=null;
+	//卖家
+	private Map<String, Integer> sellStock=new HashMap<String, Integer>(); 
+	//买家
+	private Map<String, Integer> buyStock=new HashMap<String, Integer>();
 	private class response implements Runnable{
 		
 		private Socket socket;
@@ -76,12 +79,12 @@ public class SocketServer {
 				String clientInputStr=reader.readLine();
 				if (clientInputStr.trim().indexOf("Buy")!=-1) {					
 					System.out.println("读取到买家数据是："+clientInputStr);
-					buyPrice=Integer.parseInt(clientInputStr.split(":")[1]);
-					System.out.println("买入股价："+buyPrice);
+					buyStock.put(clientInputStr.split(":")[1], Integer.parseInt(clientInputStr.split(":")[2]));
+					System.out.println("买入股价："+Integer.parseInt(clientInputStr.split(":")[2]));
 				}else if (clientInputStr.trim().indexOf("Sell")!=-1) {
 					System.out.println("读取到卖家数据是："+clientInputStr);
-					sellPrice=Integer.parseInt(clientInputStr.split(":")[1]);
-					System.out.println("卖出股价："+sellPrice);
+					sellStock.put(clientInputStr.split(":")[1], Integer.parseInt(clientInputStr.split(":")[2]));
+					System.out.println("卖出股价："+Integer.parseInt(clientInputStr.split(":")[2]));
 				}else {
 					valid=false;
 					System.out.println("命令格式有误！");
@@ -92,30 +95,31 @@ public class SocketServer {
 					out.println("Failed,暂未出现卖家或命令有误,交易失败");
 					return;
 				}
-				if (sellPrice==null || buyPrice==null) {
+				if (sellStock.size()==0 || buyStock.size()==0) {
 					out.println("Failed,暂未出现买家或者暂未出现卖家,交易失败");
 					return;
 				}
-				if (buyPrice<sellPrice) {
+				if (!sellStock.containsKey(clientInputStr.split(":")[1]) || !buyStock.containsKey(clientInputStr.split(":")[1])) {
+					out.println("Failed,暂未出现想要买入的股票,交易失败");
+				}
+				if (buyStock.get(clientInputStr.split(":")[1])<sellStock.get(clientInputStr.split(":")[1])) {
 					out.println("Failed,买卖家所出股价不合理,交易失败");
 					return;
 				}
-				out.println("Success,成交,成交额为："+(buyPrice-sellPrice));
-				sellPrice=null;
-				buyPrice=null;
-				
-				
+				out.println("Success,成交,成交额为："+sellStock.get(clientInputStr.split(":")[1]));
+				buyStock.remove(clientInputStr.split(":")[1]);
+				sellStock.remove(clientInputStr.split(":")[1]);
 				
 			} catch (Exception e) {
 				System.out.println("服务器run异常："+e.getMessage());
 			}finally{
 				try {
-					out.close();
+					reader.close();
 				} catch (Exception e2) {
 					e2.printStackTrace();
 				}
 				try {
-					reader.close();
+					out.close();
 				} catch (Exception e2) {
 					e2.printStackTrace();
 				}
