@@ -54,18 +54,18 @@ public class Client {
 				socket=new Socket(this.ip,this.serverPort);
 				//向服务端发送数据
 				PrintStream out=new PrintStream(socket.getOutputStream());
-				System.out.println("请输入想要成交的股名：");
-				String stockName=scanner.next();
-				System.out.println("请输入股票数量：");
-				Integer stockNumber=scanner.nextInt();
+				//System.out.println("请输入想要成交的股名：");
+				//String stockName=scanner.next();
+				//System.out.println("请输入股票数量：");
+				//Integer stockNumber=scanner.nextInt();
 				System.out.println("请输入想要成交的股价：");
 				int price=scanner.nextInt();
 				System.out.println("请输入命令[eg:Buy/Sell]:");
 				String command=scanner.next();
-				command+=":"+stockName+":"+stockNumber+":"+price;
-				//要发送的数据
 				System.out.println("股票信息如下：");
-				System.out.println("交易类型："+command+",股名："+stockName+",股票数量："+stockNumber+",交易价格："+price+"元");
+				System.out.println("交易类型："+command+",交易价格："+price+"元");
+				command+=":"+price;
+				//要发送的数据
 				out.println(command);
 				//读取服务端数据
 				BufferedReader reader=new BufferedReader(new InputStreamReader(socket.getInputStream()));

@@ -58,10 +58,14 @@ public class SocketServer {
 	 * @version 
 	 * @description
 	 */
+	//交易限度
+	private int size=5;
 	//卖家
-	private Map<String, Stock> sellStock=new HashMap<String, Stock>(); 
+	//private Map<String, Stock> sellStock=new HashMap<String, Stock>();
+	private Queue sellQueue=new Queue(size);
 	//买家
-	private Map<String, Stock> buyStock=new HashMap<String, Stock>();
+	//private Map<String, Stock> buyStock=new HashMap<String, Stock>();
+	private Queue buyQueue=new Queue(size);
 	private class response implements Runnable{
 		
 		private Socket socket;
@@ -77,28 +81,36 @@ public class SocketServer {
 				//读取客户端数据
 				reader=new BufferedReader(new InputStreamReader(socket.getInputStream()));
 				String clientInputStr=reader.readLine();
-				String stockName=clientInputStr.trim().split(":")[1];
-				Integer stockNumber=Integer.parseInt(clientInputStr.trim().split(":")[2]);
-				Integer stockPrice=Integer.parseInt(clientInputStr.trim().split(":")[3]);
+				//String stockName=clientInputStr.trim().split(":")[1];
+				//Integer stockNumber=Integer.parseInt(clientInputStr.trim().split(":")[2]);
+				//股价
+				Integer stockPrice=Integer.parseInt(clientInputStr.trim().split(":")[1]);
 				if (clientInputStr.trim().indexOf("Buy")!=-1) {					
-					System.out.println("买入["+stockName+"]股，数量："+stockNumber+",股价："+stockPrice+"元");
-					if (buyStock.containsKey(stockName.trim())) {
+					//System.out.println("买入["+stockName+"]股，数量："+stockNumber+",股价："+stockPrice+"元");
+					System.out.println("买家所出股价："+stockPrice+"元");
+					/*if (buyStock.containsKey(stockName.trim())) {
 						Integer oldNumber=buyStock.get(stockName.trim()).getStockNumber();
 						buyStock.get(stockNumber).setStockNumber(oldNumber+stockNumber);
 					}else {
 						buyStock.put(stockName, new Stock(stockNumber, stockPrice));
-					}
-					
+					}*/
+					buyQueue.add(stockPrice);
+					//升序
+					buyQueue.bigSort();
+					System.out.println("买"+buyQueue.toString());
 				}else if (clientInputStr.trim().indexOf("Sell")!=-1) {
-					System.out.println("卖出["+stockName+"]股，数量："+stockNumber+",股价："+stockPrice+"元");
-					if (sellStock.containsKey(stockName.trim())) {
+					//System.out.println("卖出["+stockName+"]股，数量："+stockNumber+",股价："+stockPrice+"元");
+					System.out.println("卖家所出股价："+stockPrice+"元");
+					/*if (sellStock.containsKey(stockName.trim())) {
 						Integer oldNumber=sellStock.get(stockName.trim()).getStockNumber();
 						sellStock.get(stockNumber).setStockNumber(oldNumber+stockNumber);
 						
 					}else {
 						sellStock.put(stockName, new Stock(stockNumber, stockPrice));
-					}
-					
+					}*/
+					sellQueue.add(stockPrice);
+					//降序
+					sellQueue.smallSort();
 				}else {
 					valid=false;
 					System.out.println("命令格式有误！");
@@ -106,34 +118,40 @@ public class SocketServer {
 				//向客户端回复数据
 				out=new PrintStream(socket.getOutputStream());
 				if (!valid) {
-					out.println("Failed,暂未出现卖家或命令有误,交易失败");
+					out.println("Failed,命令有误,交易失败");
 					return;
 				}
-				if (sellStock.size()==0 || buyStock.size()==0) {
-					out.println("Failed,暂未出现买家或者暂未出现卖家,交易失败");
-					return;
-				}
-				
-				if (clientInputStr.trim().indexOf("Sell")!=-1) {
-					out.println("Failed,暂未出现符合交易的买家");
-					return;
-				}
-				if (!sellStock.containsKey(stockName)) {
-					out.println("Failed,暂未出现想要买入的股票,交易失败");
+				if (sellQueue.isEmpty() || buyQueue.isEmpty() || clientInputStr.trim().indexOf("Sell")!=-1) {
+					out.println("等待卖家或买家进行交易");
 					return;
 				}
 				
-				if (buyStock.get(stockName).getStockNumber()>sellStock.get(stockName).getStockNumber()) {
-					out.println("Failed,所要买入数量超出现有卖出股票的库存");
+				if (sellQueue.isFull() || buyQueue.isFull()) {
+					out.println("超过交易限度");
 					return;
 				}
-				
-				if (sellStock.get(stockName).getStockPrice()>buyStock.get(stockName).getStockPrice()) {
-					out.println("Failed,买卖家所出股价不合理,交易失败");
-					return;
+				int[] buy=buyQueue.getQueueArray();
+				int[] sell=sellQueue.getQueueArray();
+				System.out.println(sellQueue.toString());
+				for (int i = 0; i <buy.length; i++) {
+					for (int j = 0; j <sell.length; j++) {
+						if (buy[i]>=sell[j]) {
+							
+							out.println("Success,交易成功,买家以"+sell[j]+"元，买入股票");
+							buyQueue.remove();
+							sellQueue.remove();
+							break;
+						}
+						if (i==buy.length-1 && j==sell.length-1) {
+							out.println("等待卖家或买家进行交易");
+							break;
+						}
+					}
 				}
 				
-				//成交的情况，即是买家，库存充足，价格合理
+				
+				
+				/*//成交的情况，即是买家，库存充足，价格合理
 				Integer oldNumber=sellStock.get(stockName).getStockNumber();
 				sellStock.get(stockName).setStockNumber(oldNumber-stockNumber);
 				
@@ -143,7 +161,7 @@ public class SocketServer {
 				if (sellStock.get(stockName).getStockNumber()==0) {
 					//当股票卖出完毕，则从卖家对列中移除
 					sellStock.remove(stockName);
-				}
+				}*/
 				
 			} catch (Exception e) {
 				System.out.println("服务器run异常："+e.getMessage());
